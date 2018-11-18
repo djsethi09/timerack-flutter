@@ -20,7 +20,7 @@ class TimeRackApp extends StatelessWidget {
       color: Colors.green,
       home: new Splash(),
       theme: new ThemeData(
-        primarySwatch: Colors.green,
+        primarySwatch: Colors.orange,
       ),
     );
   }
@@ -102,7 +102,6 @@ class SplashState extends State<Splash> {
       Navigator.of(context).pushReplacement(
           new MaterialPageRoute(builder: (context) => new TimeRackHome()));
     } else {
-      //prefs.setBool('seen', true);
       Navigator.of(context).pushReplacement(
           new MaterialPageRoute(builder: (context) => new Register()));
     }

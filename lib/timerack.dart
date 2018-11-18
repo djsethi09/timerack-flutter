@@ -164,6 +164,7 @@ class _TimeRackHomeState extends State<TimeRackHome> {
 
   void logError(String code, String message) =>
       print('Error: $code\nError Message: $message');
+
   /// Display the preview from the camera (or a message if the preview is not available).
   Widget _cameraPreviewWidget() {
     if (controller == null || !controller.value.isInitialized) {
