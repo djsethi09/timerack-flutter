@@ -320,7 +320,7 @@ class _TimeRackHomeState extends State<TimeRackHome> {
 
   punchAttendance() {
     var dio = new Dio();
-    dio.options.baseUrl = "http://www.domainrestapi.com/api-endpoint-test";
+    dio.options.baseUrl = "";
     dio.options.connectTimeout = 5000; //5s
     dio.options.receiveTimeout=5000;
 
