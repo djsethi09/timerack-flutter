@@ -31,6 +31,7 @@ class _TimeRackHomeState extends State<TimeRackHome> {
   bool apiCall = false;
   String filePath;
   bool _isCheckInOutDisabled;
+  String _punchText="Check In";
   var response;
   @override
   void initState() {
@@ -73,6 +74,7 @@ class _TimeRackHomeState extends State<TimeRackHome> {
 
     setState(() {
       _isCheckInOutDisabled = true;
+       if(globals.prefs.getInt("inOrOut")==0) {_punchText = 'Check Out';}else{_punchText = 'Check In';}
     });
 
   }
@@ -98,14 +100,14 @@ class _TimeRackHomeState extends State<TimeRackHome> {
                 color: Colors.black,
                 border: Border.all(
                   color: controller != null && controller.value.isRecordingVideo
-                      ? Colors.redAccent
+                      ? Colors.green
                       : Colors.grey,
                   width: 3.0,
                 ),
               ),
             ),
           ),
-          _captureControlRowWidget(),
+          //_captureControlRowWidget(),
           Padding(
             padding: const EdgeInsets.all(5.0),
             child: Row(
@@ -116,25 +118,26 @@ class _TimeRackHomeState extends State<TimeRackHome> {
                 new Container(
                   margin: const EdgeInsets.only(left: 20.0),
                   child:RaisedButton(
-                          onPressed: (){
-                            if(!_isCheckInOutDisabled) {
-
+                          onPressed:
+                            /*if(!_isCheckInOutDisabled) {
+                              _isCheckInOutDisabled = true;
+                              punchAttendance();
+                            }else{
                               _scaffoldKey.currentState.showSnackBar(
                                   new SnackBar(
-                                    duration: new Duration(seconds: 4), content:
-                                  new Row(
-                                    children: <Widget>[
-                                      new CircularProgressIndicator(),
-                                      globals.prefs.getInt("inOrOut") == 0
-                                          ? new Text("  Checking-Out...")
-                                          : new Text("  Checking-In...")
-                                    ],
-                                  ),
+                                    duration: new Duration(seconds: 2),
+                                      content:
+                                      new Text("Please take image first")
                                   ));
-                              punchAttendance().then(updateStateAfterResponse());
-                            }
-                            },
-                          child: globals.prefs.getInt("inOrOut")==0? Text('Check Out'):Text('Check In'),
+                            }*/
+
+                            controller != null &&
+                                controller.value.isInitialized &&
+                                !controller.value.isRecordingVideo
+                                ? onTakePictureButtonPressed
+                                : null
+                            ,
+                          child: Text(_punchText),
                           padding: const EdgeInsets.all(8.0),
                           textColor: Colors.white,
                           color: Colors.green,
@@ -260,10 +263,24 @@ class _TimeRackHomeState extends State<TimeRackHome> {
   }
 
   void onTakePictureButtonPressed() {
+    _scaffoldKey.currentState.showSnackBar(
+        new SnackBar(
+          //duration: new Duration(seconds: 4),
+          content:
+          new Row(
+            children: <Widget>[
+              new CircularProgressIndicator(),
+              globals.prefs.getInt("inOrOut") == 0
+                  ? new Text("  Checking Out...")
+                  : new Text("  Checking In...")
+            ],
+          ),
+        ));
     takePicture().then((String filePath) {
       if (mounted) {
         setState(() {
           imagePath = filePath;
+          punchAttendance();
           _isCheckInOutDisabled = false;
         });
         //if (filePath != null) showInSnackBar('Picture saved to $filePath');
@@ -277,8 +294,9 @@ class _TimeRackHomeState extends State<TimeRackHome> {
       return null;
     }
     final Directory extDir = await getApplicationDocumentsDirectory();
-    final String dirPath = '${extDir.path}/Pictures/flutter_test';
+    final String dirPath = '${extDir.path}/Pictures/timerack';
     await Directory(dirPath).create(recursive: true);
+
     filePath = '$dirPath/${timestamp()}.jpg';
 
     if (controller.value.isTakingPicture) {
@@ -300,56 +318,53 @@ class _TimeRackHomeState extends State<TimeRackHome> {
     showInSnackBar('Error: ${e.code}\n${e.description}');
   }
 
-  punchAttendance() async{
-
+  punchAttendance() {
     var dio = new Dio();
-    dio.options.baseUrl = "http://www.example.com/api-endpoint";
+    dio.options.baseUrl = "http://www.domainrestapi.com/api-endpoint-test";
     dio.options.connectTimeout = 5000; //5s
     dio.options.receiveTimeout=5000;
 
     FormData formData = new FormData.from({
       "empCode": globals.prefs.getString("empCode"),
-      "type": globals.prefs.getInt("inOrOut"),
+      "inOrOut": globals.prefs.getInt("inOrOut"),
       "location":_currentLocation["latitude"].toString()+","+ _currentLocation["longitude"].toString(),
       "file": new UploadFileInfo(new File(filePath),globals.prefs.getString("empCode")+'_'+timestamp()+'.jpg')
     });
-
     // Send FormData
-    response = await dio.post("/test", data: formData);
-
-    print(response);
-  }
-
-  updateStateAfterResponse() {
-        if(response=="OK-Value_fromAPI"){
-          _isCheckInOutDisabled = true;
+    dio.post("/api", data: formData).then((response){
+        File(filePath).delete();
+        if (response.statusCode == 200) {
           _scaffoldKey.currentState.showSnackBar(
               new SnackBar(
-                duration: new Duration(seconds: 4), content:
-              new Row(
-                children: <Widget>[
-                  globals.prefs.getInt("inOrOut")==0?new Text("Checked Out succesfully"):new Text("Checked In succesfully")
-                ],
-              ),
+                duration: new Duration(seconds: 2), content:
+                new Row(
+                  children: <Widget>[
+                    globals.prefs.getInt("inOrOut")==0?new Text("Checked Out succesfully"):new Text("Checked In succesfully")
+                  ],
+                ),
               ));
           if(globals.prefs.getInt("inOrOut")==0 || globals.prefs.getInt("inOrOut")==null){
             globals.prefs.setInt("inOrOut",1);
           }else{
             globals.prefs.setInt("inOrOut",0);
           }
-          //Navigator.of(context).pushNamed("/");
+          setState(() {
+            if(globals.prefs.getInt("inOrOut")==0) {_punchText = 'Check Out';}else{_punchText = 'Check In';}
+          });
         }else{
-          _isCheckInOutDisabled = true;
-          _scaffoldKey.currentState.showSnackBar(
-              new SnackBar(
-                duration: new Duration(seconds: 4), content:
-              new Row(
-                children: <Widget>[
-                  new Text("Some error occured")
-                ],
-              ),
-              ));
-        }
+        _scaffoldKey.currentState.showSnackBar(
+            new SnackBar(
+              duration: new Duration(seconds: 2),
+              content:
+            new Row(
+              children: <Widget>[
+                 new Text("Some error occured")
+              ],
+            ),
+          ));
+       }
+    });
+    return response;
   }
 }
 
